@@ -11,12 +11,17 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.models.User || mongoose.model("User", userSchema);
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/team-task";
+const MONGODB_URI = process.env.MONGO_URI;
 
 async function seedAdmin() {
+  if (!MONGODB_URI) {
+    console.error("FATAL: Please set MONGO_URI in your environment or .env.local file.");
+    process.exit(1);
+  }
+
   try {
     await mongoose.connect(MONGODB_URI);
-    console.log("Connected to DB..");
+    console.log("Connected to MongoDB Atlas..");
 
     const adminEmail = "admin@teamtask.com";
     

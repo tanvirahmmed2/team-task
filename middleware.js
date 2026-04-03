@@ -15,14 +15,14 @@ export async function middleware(request) {
   const token = request.cookies.get("team_task_token")?.value;
 
   if (!token) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   const payload = await verifyToken(token);
 
   if (!payload) {
     // Invalid token
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   // Role-based access control

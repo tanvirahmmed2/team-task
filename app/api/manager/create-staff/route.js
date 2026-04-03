@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import dbConnect from "@/lib/db";
+import ConnectDB from "@/lib/db";
 import User from "@/models/User";
 import { verifyToken, hashPassword } from "@/lib/auth";
+import { sendWelcomeEmail } from "@/lib/mail";
 
 export async function POST(request) {
   try {
-    await dbConnect();
+    await ConnectDB();
     const token = request.cookies.get("team_task_token")?.value;
     if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -35,6 +36,9 @@ export async function POST(request) {
       createdBy: payload.userId,
       managerId: payload.userId
     });
+
+    const loginUrl = `${request.headers.get("origin") || "http://localhost:3000"}`;
+    sendWelcomeEmail(email, name, password, loginUrl);
 
     return NextResponse.json({
       message: "Staff created successfully",
