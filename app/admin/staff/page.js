@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-
+import { Eye } from "lucide-react";
+import Link from "next/link";
 export default function AdminStaffPage() {
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +41,7 @@ export default function AdminStaffPage() {
                 <th className="p-4 font-medium">Email</th>
                 <th className="p-4 font-medium">Supervising Manager</th>
                 <th className="p-4 font-medium">Joined</th>
+                <th className="p-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -61,6 +63,15 @@ export default function AdminStaffPage() {
                       {member.managerId ? member.managerId.name : "N/A"}
                     </td>
                     <td className="p-4 text-slate-500 text-sm">{new Date(member.createdAt).toLocaleDateString()}</td>
+                    <td className="p-4 flex gap-2 justify-end">
+                      <Link 
+                        href={`/admin/staff/${member._id}`}
+                        className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg transition"
+                        title="View Profile"
+                      >
+                        <Eye size={16} />
+                      </Link>
+                    </td>
                   </tr>
                 ))
               )}

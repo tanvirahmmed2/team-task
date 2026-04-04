@@ -12,7 +12,8 @@ export async function GET(request, { params }) {
     const payload = await verifyToken(token);
     if (!payload) return NextResponse.json({ error: "Invalid token" }, { status: 401 });
 
-    const { taskId } = params;
+    const p = await params;
+    const { taskId } = p;
 
     const comments = await Comment.find({ taskId })
       .populate("userId", "name role")

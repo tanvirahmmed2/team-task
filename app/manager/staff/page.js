@@ -1,13 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Plus, User, Mail, ShieldAlert } from "lucide-react";
+import { Plus, User, Mail, ShieldAlert, Ban, Trash2, CheckCircle, Eye } from "lucide-react";
+import Link from "next/link";
 
 export default function ManagerStaffPage() {
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [formData, setFormData] = useState({ name: "", email: "", password: "" });
+  const [formData, setFormData] = useState({ name: "", email: "", password: "", department: "" });
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -26,6 +27,41 @@ export default function ManagerStaffPage() {
     }
   };
 
+  const handleUpdateStatus = async (id, currentStatus) => {
+    const newStatus = currentStatus === "Active" ? "Blocked" : "Active";
+    if (!confirm(`Are you sure you want to ${currentStatus === "Active" ? "block" : "unblock"} this staff member?`)) return;
+    try {
+      const res = await fetch(`/api/users/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (res.ok) {
+        toast.success(`Staff member ${newStatus.toLowerCase()}`);
+        fetchStaff();
+      } else {
+        throw new Error("Failed to update status");
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
+  const handleRemove = async (id) => {
+    if (!confirm("Are you sure you want to permanently remove this staff member?")) return;
+    try {
+      const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Staff member removed");
+        fetchStaff();
+      } else {
+        throw new Error("Failed to remove staff");
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
   const handleCreate = async (e) => {
     e.preventDefault();
     setCreating(true);
@@ -40,7 +76,7 @@ export default function ManagerStaffPage() {
 
       toast.success("Staff created successfully!");
       setShowModal(false);
-      setFormData({ name: "", email: "", password: "" });
+      setFormData({ name: "", email: "", password: "", department: "" });
       fetchStaff();
     } catch (error) {
       toast.error(error.message || "Failed to create staff");
@@ -70,8 +106,8 @@ export default function ManagerStaffPage() {
               <tr className="bg-slate-50 border-b border-slate-100 text-sm text-slate-500">
                 <th className="p-4 font-medium">Name</th>
                 <th className="p-4 font-medium">Email</th>
-                <th className="p-4 font-medium">Role</th>
                 <th className="p-4 font-medium">Joined</th>
+                <th className="p-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -90,9 +126,33 @@ export default function ManagerStaffPage() {
                     </td>
                     <td className="p-4 text-slate-600">{member.email}</td>
                     <td className="p-4">
-                      <span className="bg-slate-100 text-slate-700 text-xs px-2 py-1 rounded-full font-medium">Staff</span>
+                      <span className="bg-slate-100 text-slate-700 text-xs px-2 py-1 rounded-full font-medium ml-1">Staff</span>
+                      {member.status === "Blocked" && <span className="bg-rose-100 text-rose-800 text-xs px-2 py-1 rounded-full font-medium ml-2">Blocked</span>}
                     </td>
                     <td className="p-4 text-slate-500 text-sm">{new Date(member.createdAt).toLocaleDateString()}</td>
+                    <td className="p-4 flex gap-2 justify-end">
+                      <Link 
+                        href={`/manager/staff/${member._id}`}
+                        className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg transition"
+                        title="View Profile"
+                      >
+                        <Eye size={16} />
+                      </Link>
+                      <button 
+                        onClick={() => handleUpdateStatus(member._id, member.status || "Active")}
+                        className={`p-2 rounded-lg transition ${member.status === "Blocked" ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-100" : "bg-amber-50 text-amber-600 hover:bg-amber-100"}`}
+                        title={member.status === "Blocked" ? "Unblock" : "Block"}
+                      >
+                        {member.status === "Blocked" ? <CheckCircle size={16} /> : <Ban size={16} />}
+                      </button>
+                      <button 
+                        onClick={() => handleRemove(member._id)}
+                        className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg transition"
+                        title="Remove Permanently"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -135,6 +195,18 @@ export default function ManagerStaffPage() {
                     placeholder="john@teamtask.com"
                     value={formData.email}
                     onChange={e => setFormData({...formData, email: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Department (Optional)</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                    placeholder="e.g. Sales, Engineering"
+                    value={formData.department}
+                    onChange={e => setFormData({...formData, department: e.target.value})}
                   />
                 </div>
               </div>

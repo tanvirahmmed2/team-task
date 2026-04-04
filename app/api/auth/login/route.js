@@ -17,6 +17,10 @@ export async function POST(request) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
+    if (user.status === "Blocked") {
+      return NextResponse.json({ error: "Account blocked. Contact administrator." }, { status: 403 });
+    }
+
     const isMatch = await comparePassword(password, user.password);
     if (!isMatch) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });

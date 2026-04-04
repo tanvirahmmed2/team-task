@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Plus, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { Plus, CheckCircle, Clock, AlertCircle, Edit2, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 export default function ManagerTasksPage() {
@@ -11,6 +11,7 @@ export default function ManagerTasksPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   
   const [formData, setFormData] = useState({
     title: "", description: "", type: "direct", assignedTo: "", groupId: "", priority: "Medium", deadline: ""
@@ -41,7 +42,7 @@ export default function ManagerTasksPage() {
     }
   };
 
-  const handleCreate = async (e) => {
+  const handleCreateOrUpdate = async (e) => {
     e.preventDefault();
     setCreating(true);
     try {
@@ -49,23 +50,60 @@ export default function ManagerTasksPage() {
       if (payload.type === "direct" && !payload.assignedTo) throw new Error("Staff assignment is required");
       if (payload.type === "group" && !payload.groupId) throw new Error("Group assignment is required");
 
-      const res = await fetch("/api/tasks/create", {
-        method: "POST",
+      const url = editingId ? `/api/tasks/${editingId}` : "/api/tasks/create";
+      const method = editingId ? "PATCH" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      toast.success("Task created!");
-      setShowModal(false);
-      setFormData({ title: "", description: "", type: "direct", assignedTo: "", groupId: "", priority: "Medium", deadline: "" });
+      toast.success(`Task ${editingId ? "updated" : "created"}!`);
+      closeModal();
       fetchData();
     } catch (error) {
       toast.error(error.message);
     } finally {
       setCreating(false);
     }
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm("Are you sure you want to delete this task?")) return;
+    try {
+      const res = await fetch(`/api/tasks/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Task deleted");
+        fetchData();
+      } else {
+        throw new Error("Failed to delete task");
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
+  const openEditModal = (task) => {
+    setFormData({
+      title: task.title,
+      description: task.description,
+      type: task.type,
+      assignedTo: task.assignedTo?._id || "",
+      groupId: task.groupId?._id || "",
+      priority: task.priority,
+      deadline: task.deadline ? task.deadline.split("T")[0] : ""
+    });
+    setEditingId(task._id);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingId(null);
+    setFormData({ title: "", description: "", type: "direct", assignedTo: "", groupId: "", priority: "Medium", deadline: "" });
   };
 
   const statusColors = {
@@ -138,9 +176,15 @@ export default function ManagerTasksPage() {
                       <CheckCircle size={16} /> Approve
                     </button>
                   )}
-                  <Link href={`/manager/tasks/${task._id}`} className="px-4 py-2 bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 font-semibold rounded-lg text-sm transition">
-                    View Details
+                  <Link href={`/manager/tasks/${task._id}`} className="px-3 py-2 bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 font-semibold rounded-lg text-sm transition">
+                    View
                   </Link>
+                  <button onClick={() => openEditModal(task)} className="px-3 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-semibold rounded-lg text-sm transition" title="Edit Task">
+                    <Edit2 size={16} />
+                  </button>
+                  <button onClick={() => handleDelete(task._id)} className="px-3 py-2 bg-rose-50 text-rose-700 hover:bg-rose-100 font-semibold rounded-lg text-sm transition" title="Delete Task">
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               </div>
             ))
@@ -153,10 +197,10 @@ export default function ManagerTasksPage() {
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center p-6 border-b border-slate-100">
-              <h3 className="text-xl font-bold text-slate-800">Create Task</h3>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">×</button>
+              <h3 className="text-xl font-bold text-slate-800">{editingId ? "Edit Task" : "Create Task"}</h3>
+              <button onClick={closeModal} className="text-slate-400 hover:text-slate-600">×</button>
             </div>
-            <form onSubmit={handleCreate} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+            <form onSubmit={handleCreateOrUpdate} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
                 <input
@@ -243,9 +287,9 @@ export default function ManagerTasksPage() {
               </div>
 
               <div className="mt-8 flex justify-end gap-3 pt-4 border-t border-slate-100">
-                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition font-medium">Cancel</button>
+                <button type="button" onClick={closeModal} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition font-medium">Cancel</button>
                 <button type="submit" disabled={creating} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition font-medium disabled:opacity-70">
-                  {creating ? "Creating..." : "Create Task"}
+                  {creating ? "Saving..." : (editingId ? "Update Task" : "Create Task")}
                 </button>
               </div>
             </form>

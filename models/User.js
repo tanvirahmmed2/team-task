@@ -9,6 +9,14 @@ const userSchema = new mongoose.Schema({
   managerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }, // Associated Manager
   resetPasswordToken: { type: String, default: null },
   resetPasswordExpire: { type: Date, default: null },
+  status: { type: String, enum: ["Active", "Blocked"], default: "Active" },
+  personalInfo: {
+    phone: { type: String, default: "" },
+    department: { type: String, default: "" },
+    designation: { type: String, default: "" },
+    address: { type: String, default: "" },
+    emergencyContact: { type: String, default: "" }
+  }
 }, { timestamps: true });
 
 export default mongoose.models.User || mongoose.model("User", userSchema);

@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut, LayoutDashboard, Users, UserCheck, Briefcase, Bell, ClipboardList } from "lucide-react";
+import { LogOut, LayoutDashboard, Users, UserCheck, Briefcase, Bell, ClipboardList, User } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Sidebar({ role }) {
@@ -20,6 +20,7 @@ export default function Sidebar({ role }) {
       { name: "Managers", href: "/admin/managers", icon: UserCheck },
       { name: "Staff", href: "/admin/staff", icon: Users },
       { name: "Notices", href: "/admin/notices", icon: Bell },
+      { name: "My Profile", href: "/profile", icon: User },
     ],
     Manager: [
       { name: "Dashboard", href: "/manager/dashboard", icon: LayoutDashboard },
@@ -27,11 +28,13 @@ export default function Sidebar({ role }) {
       { name: "Groups", href: "/manager/groups", icon: Briefcase },
       { name: "Staff", href: "/manager/staff", icon: Users },
       { name: "Notices", href: "/manager/notices", icon: Bell },
+      { name: "My Profile", href: "/profile", icon: User },
     ],
     Staff: [
       { name: "Dashboard", href: "/staff/dashboard", icon: LayoutDashboard },
       { name: "My Tasks", href: "/staff/tasks", icon: ClipboardList },
       { name: "Notices", href: "/staff/notices", icon: Bell },
+      { name: "My Profile", href: "/profile", icon: User },
     ],
   };
 

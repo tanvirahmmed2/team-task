@@ -1,13 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Plus, BellRing } from "lucide-react";
+import { Plus, BellRing, Edit2, Trash2 } from "lucide-react";
 
 export default function ManagerNoticesPage() {
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({ title: "", message: "", priority: "Normal", target: "team" });
+  const [editingId, setEditingId] = useState(null);
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -26,27 +27,55 @@ export default function ManagerNoticesPage() {
     }
   };
 
-  const handleCreate = async (e) => {
+  const handleCreateOrUpdate = async (e) => {
     e.preventDefault();
     setCreating(true);
     try {
-      const res = await fetch("/api/notices", {
-        method: "POST",
+      const url = editingId ? `/api/notices/${editingId}` : "/api/notices";
+      const method = editingId ? "PATCH" : "POST";
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      toast.success("Notice published to team!");
-      setShowModal(false);
-      setFormData({ ...formData, title: "", message: "" });
+      toast.success(`Notice ${editingId ? "updated" : "published"} to team!`);
+      closeModal();
       fetchNotices();
     } catch (error) {
       toast.error(error.message);
     } finally {
       setCreating(false);
     }
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm("Are you sure you want to delete this notice?")) return;
+    try {
+      const res = await fetch(`/api/notices/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Notice deleted");
+        fetchNotices();
+      } else {
+        throw new Error("Failed to delete");
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
+  const openEditModal = (notice) => {
+    setFormData({ title: notice.title, message: notice.message, priority: notice.priority, target: notice.target });
+    setEditingId(notice._id);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingId(null);
+    setFormData({ title: "", message: "", priority: "Normal", target: "team" });
   };
 
   return (
@@ -92,7 +121,11 @@ export default function ManagerNoticesPage() {
                 <p className="text-slate-600 mb-4 whitespace-pre-wrap">{notice.message}</p>
                 <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100 text-xs text-slate-400 font-medium">
                   <span>From: {notice.createdBy?.name || "System"}</span>
-                  <span>{new Date(notice.createdAt).toLocaleString()}</span>
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => openEditModal(notice)} className="text-indigo-600 hover:text-indigo-800"><Edit2 size={14}/></button>
+                    <button onClick={() => handleDelete(notice._id)} className="text-rose-600 hover:text-rose-800"><Trash2 size={14}/></button>
+                    <span>{new Date(notice.createdAt).toLocaleString()}</span>
+                  </div>
                 </div>
               </div>
             ))
@@ -105,10 +138,10 @@ export default function ManagerNoticesPage() {
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center p-6 border-b border-slate-100">
-              <h3 className="text-xl font-bold text-slate-800">Publish Team Notice</h3>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">×</button>
+              <h3 className="text-xl font-bold text-slate-800">{editingId ? "Edit Team Notice" : "Publish Team Notice"}</h3>
+              <button onClick={closeModal} className="text-slate-400 hover:text-slate-600">×</button>
             </div>
-            <form onSubmit={handleCreate} className="p-6 space-y-4">
+            <form onSubmit={handleCreateOrUpdate} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
                 <input
@@ -153,9 +186,9 @@ export default function ManagerNoticesPage() {
               </div>
               
               <div className="mt-8 flex justify-end gap-3 pt-4 border-t border-slate-100">
-                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition font-medium">Cancel</button>
+                <button type="button" onClick={closeModal} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition font-medium">Cancel</button>
                 <button type="submit" disabled={creating} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition font-medium disabled:opacity-70">
-                  {creating ? "Publishing..." : "Publish to Team"}
+                  {creating ? "Saving..." : (editingId ? "Update Notice" : "Publish to Team")}
                 </button>
               </div>
             </form>

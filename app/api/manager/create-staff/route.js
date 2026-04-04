@@ -15,7 +15,7 @@ export async function POST(request) {
       return NextResponse.json({ error: "Forbidden: Managers only" }, { status: 403 });
     }
 
-    const { name, email, password } = await request.json();
+    const { name, email, password, department } = await request.json();
 
     if (!name || !email || !password) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -34,7 +34,8 @@ export async function POST(request) {
       password: hashedPassword,
       role: "Staff",
       createdBy: payload.userId,
-      managerId: payload.userId
+      managerId: payload.userId,
+      personalInfo: { department: department || "" }
     });
 
     const loginUrl = `${request.headers.get("origin") || "http://localhost:3000"}`;

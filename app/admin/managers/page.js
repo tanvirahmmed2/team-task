@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Plus, User, Mail, ShieldAlert } from "lucide-react";
+import { Plus, User, Mail, ShieldAlert, Ban, Trash2, CheckCircle, Eye } from "lucide-react";
+import Link from "next/link";
 
 export default function ManagersPage() {
   const [managers, setManagers] = useState([]);
@@ -23,6 +24,41 @@ export default function ManagersPage() {
       toast.error("Failed to load managers");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpdateStatus = async (id, currentStatus) => {
+    const newStatus = currentStatus === "Active" ? "Blocked" : "Active";
+    if (!confirm(`Are you sure you want to ${currentStatus === "Active" ? "block" : "unblock"} this manager?`)) return;
+    try {
+      const res = await fetch(`/api/users/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (res.ok) {
+        toast.success(`Manager ${newStatus.toLowerCase()}`);
+        fetchManagers();
+      } else {
+        throw new Error("Failed to update status");
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
+  const handleRemove = async (id) => {
+    if (!confirm("Are you sure you want to permanently remove this manager?")) return;
+    try {
+      const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Manager removed");
+        fetchManagers();
+      } else {
+        throw new Error("Failed to remove manager");
+      }
+    } catch (error) {
+      toast.error(error.message);
     }
   };
 
@@ -70,8 +106,8 @@ export default function ManagersPage() {
               <tr className="bg-slate-50 border-b border-slate-100 text-sm text-slate-500">
                 <th className="p-4 font-medium">Name</th>
                 <th className="p-4 font-medium">Email</th>
-                <th className="p-4 font-medium">Role</th>
                 <th className="p-4 font-medium">Joined</th>
+                <th className="p-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -90,9 +126,33 @@ export default function ManagersPage() {
                     </td>
                     <td className="p-4 text-slate-600">{manager.email}</td>
                     <td className="p-4">
-                      <span className="bg-emerald-100 text-emerald-800 text-xs px-2 py-1 rounded-full font-medium">Manager</span>
+                      <span className="bg-emerald-100 text-emerald-800 text-xs px-2 py-1 rounded-full font-medium ml-1">Manager</span>
+                      {manager.status === "Blocked" && <span className="bg-rose-100 text-rose-800 text-xs px-2 py-1 rounded-full font-medium ml-2">Blocked</span>}
                     </td>
                     <td className="p-4 text-slate-500 text-sm">{new Date(manager.createdAt).toLocaleDateString()}</td>
+                    <td className="p-4 flex gap-2 justify-end">
+                      <Link 
+                        href={`/admin/managers/${manager._id}`}
+                        className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg transition"
+                        title="View Profile"
+                      >
+                        <Eye size={16} />
+                      </Link>
+                      <button 
+                        onClick={() => handleUpdateStatus(manager._id, manager.status || "Active")}
+                        className={`p-2 rounded-lg transition ${manager.status === "Blocked" ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-100" : "bg-amber-50 text-amber-600 hover:bg-amber-100"}`}
+                        title={manager.status === "Blocked" ? "Unblock" : "Block"}
+                      >
+                        {manager.status === "Blocked" ? <CheckCircle size={16} /> : <Ban size={16} />}
+                      </button>
+                      <button 
+                        onClick={() => handleRemove(manager._id)}
+                        className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg transition"
+                        title="Remove Permanently"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}

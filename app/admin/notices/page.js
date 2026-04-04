@@ -1,13 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Plus, BellRing } from "lucide-react";
+import { Plus, BellRing, Edit2, Trash2 } from "lucide-react";
 
 export default function AdminNoticesPage() {
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({ title: "", message: "", priority: "Normal", target: "all" });
+  const [editingId, setEditingId] = useState(null);
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -26,36 +27,56 @@ export default function AdminNoticesPage() {
     }
   };
 
-  const handleCreate = async (e) => {
+  const handleCreateOrUpdate = async (e) => {
     e.preventDefault();
     setCreating(true);
     try {
-      const res = await fetch("/api/notices/route", { // Note: The route file is at app/api/notices/route.js, POST there
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-      // Wait, POST is at /api/notices/route according to the filename, wait I called it `/api/notices/route.js`.
-      // The path in next.js is `/api/notices`.
-      const apiUrl = "/api/notices";
-      const finalRes = await fetch(apiUrl, {
-        method: "POST",
+      const url = editingId ? `/api/notices/${editingId}` : "/api/notices";
+      const method = editingId ? "PATCH" : "POST";
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
-      const data = await finalRes.json();
-      if (!finalRes.ok) throw new Error(data.error);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
 
-      toast.success("Notice created successfully!");
-      setShowModal(false);
-      setFormData({ title: "", message: "", priority: "Normal", target: "all" });
+      toast.success(`Notice ${editingId ? "updated" : "created"}!`);
+      closeModal();
       fetchNotices();
     } catch (error) {
-      toast.error(error.message || "Failed to create notice");
+      toast.error(error.message || "Failed to save notice");
     } finally {
       setCreating(false);
     }
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm("Are you sure you want to delete this notice?")) return;
+    try {
+      const res = await fetch(`/api/notices/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Notice deleted");
+        fetchNotices();
+      } else {
+        throw new Error("Failed to delete");
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
+  const openEditModal = (notice) => {
+    setFormData({ title: notice.title, message: notice.message, priority: notice.priority, target: notice.target });
+    setEditingId(notice._id);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingId(null);
+    setFormData({ title: "", message: "", priority: "Normal", target: "all" });
   };
 
   return (
@@ -96,7 +117,11 @@ export default function AdminNoticesPage() {
                 <p className="text-slate-600 mb-4 whitespace-pre-wrap">{notice.message}</p>
                 <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100 text-xs text-slate-400 font-medium">
                   <span>Target: {notice.target.toUpperCase()}</span>
-                  <span>{new Date(notice.createdAt).toLocaleString()}</span>
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => openEditModal(notice)} className="text-indigo-600 hover:text-indigo-800"><Edit2 size={14}/></button>
+                    <button onClick={() => handleDelete(notice._id)} className="text-rose-600 hover:text-rose-800"><Trash2 size={14}/></button>
+                    <span>{new Date(notice.createdAt).toLocaleString()}</span>
+                  </div>
                 </div>
               </div>
             ))
@@ -109,10 +134,10 @@ export default function AdminNoticesPage() {
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center p-6 border-b border-slate-100">
-              <h3 className="text-xl font-bold text-slate-800">Publish Global Notice</h3>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">×</button>
+              <h3 className="text-xl font-bold text-slate-800">{editingId ? "Edit Notice" : "Publish Global Notice"}</h3>
+              <button onClick={closeModal} className="text-slate-400 hover:text-slate-600">×</button>
             </div>
-            <form onSubmit={handleCreate} className="p-6 space-y-4">
+            <form onSubmit={handleCreateOrUpdate} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
                 <input
@@ -159,9 +184,9 @@ export default function AdminNoticesPage() {
               </div>
               
               <div className="mt-8 flex justify-end gap-3 pt-4 border-t border-slate-100">
-                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition font-medium">Cancel</button>
+                <button type="button" onClick={closeModal} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition font-medium">Cancel</button>
                 <button type="submit" disabled={creating} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition font-medium disabled:opacity-70">
-                  {creating ? "Publishing..." : "Publish Notice"}
+                  {creating ? "Saving..." : (editingId ? "Update Notice" : "Publish Notice")}
                 </button>
               </div>
             </form>
