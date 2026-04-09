@@ -38,7 +38,7 @@ export async function POST(request) {
       personalInfo: { department: department || "" }
     });
 
-    const loginUrl = `${request.headers.get("origin") || "http://localhost:3000"}`;
+    const loginUrl = `${request.headers.get("origin")}`;
     sendWelcomeEmail(email, name, password, loginUrl);
 
     return NextResponse.json({

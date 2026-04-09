@@ -36,7 +36,7 @@ export async function POST(request) {
       createdBy: payload.userId
     });
 
-    const loginUrl = `${request.headers.get("origin") || "http://localhost:3000"}`;
+    const loginUrl = `${request.headers.get("origin")}`;
     // Fire and forget email
     sendWelcomeEmail(email, name, password, loginUrl);
 
